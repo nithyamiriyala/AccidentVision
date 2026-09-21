@@ -13,6 +13,10 @@ export async function createIncidentFromDetection(data: {
 	location?: string;
 	latitude?: number;
 	longitude?: number;
+	incidentType?: IncidentType;
+	frameNumber?: number;
+	videoTimestamp?: string;
+	detectedObjects?: string;
 }) {
 	return await prisma.incident.create({
 		data: {
@@ -23,6 +27,10 @@ export async function createIncidentFromDetection(data: {
 			location: data.location,
 			latitude: data.latitude,
 			longitude: data.longitude,
+			incidentType: data.incidentType,
+			frameNumber: data.frameNumber,
+			videoTimestamp: data.videoTimestamp,
+			detectedObjects: data.detectedObjects,
 			verificationStatus: VerificationStatus.PENDING,
 		},
 		include: {

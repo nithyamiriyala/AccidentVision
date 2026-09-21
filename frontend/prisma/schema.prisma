@@ -125,6 +125,9 @@ model Incident {
   verifiedByUser    User?              @relation("VerifiedIncidents", fields: [verifiedBy], references: [id])
   incidentType      IncidentType?
   severity          IncidentSeverity?
+  frameNumber       Int?
+  videoTimestamp    String?
+  detectedObjects   String?
   notes             String?
   responseNeeded    Boolean            @default(false)
   responseInitiated Boolean            @default(false)

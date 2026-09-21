@@ -48,12 +48,17 @@ export default function Page() {
 	const [lastProcessedTimestamp, setLastProcessedTimestamp] =
 		useState<number>(0);
 	const [processingComplete, setProcessingComplete] = useState(false);
+	const processingCompleteRef = useRef(false);
 
 	const wsRef = useRef<WebSocket | null>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const logsEndRef = useRef<HTMLDivElement>(null);
 	const currentCCTVRef = useRef<CCTV | null>(null);
 	const { toast } = useToast();
+
+	useEffect(() => {
+		processingCompleteRef.current = processingComplete;
+	}, [processingComplete]);
 
 	useEffect(() => {
 		if (logsEndRef.current) {
@@ -149,6 +154,7 @@ export default function Page() {
 		setBackendReady(false);
 		setLastProcessedTimestamp(0);
 		setProcessingComplete(false);
+		processingCompleteRef.current = false;
 
 		if (canvasRef.current) {
 			const ctx = canvasRef.current.getContext('2d');
@@ -234,6 +240,7 @@ export default function Page() {
 			if (data.type === 'processing_complete') {
 				setDetectionActive(false);
 				setProcessingComplete(true);
+				processingCompleteRef.current = true;
 				addLog('Video processing completed', 'info');
 
 				if (data.accident_found) {
@@ -301,8 +308,13 @@ export default function Page() {
 						data.location ||
 						`${camera.latitude.toFixed(6)}, ${camera.longitude.toFixed(6)}`,
 					incidentType: data.accident_type,
+					frameNumber: data.frame_number,
+					videoTimestamp: data.video_timestamp,
+					detectedObjects: data.detected_objects,
 					metadata: {
 						frameNumber: data.frame_number,
+						videoTimestamp: data.video_timestamp,
+						detectedObjects: data.detected_objects,
 						detectedAt: new Date().toISOString(),
 						accidentType: data.accident_type,
 						isLocalFile: true,
@@ -404,7 +416,7 @@ export default function Page() {
 
 		addLog(`Disconnected: ${reason}`, 'warning');
 
-		if (currentCCTVRef.current && !processingComplete) {
+		if (currentCCTVRef.current && !processingCompleteRef.current) {
 			const backoffTime = event.code === 1006 ? 3000 : 1000;
 			addLog(
 				`Attempting to reconnect in ${backoffTime / 1000} seconds...`,
@@ -412,7 +424,7 @@ export default function Page() {
 			);
 
 			setTimeout(() => {
-				if (currentCCTVRef.current && !processingComplete) {
+				if (currentCCTVRef.current && !processingCompleteRef.current) {
 					addLog('Reconnecting to detection service...', 'info');
 					connectToDetectionService(currentCCTVRef.current);
 				}

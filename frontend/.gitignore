@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Runtime generated accident evidence and uploaded media
+/public/accident_images/
+/public/uploads/

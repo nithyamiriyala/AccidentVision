@@ -5,7 +5,7 @@ import {
 	getPendingIncidents,
 	createIncidentFromDetection,
 } from '../../../services/incidentServices';
-import { VerificationStatus } from '@prisma/client';
+import { VerificationStatus, IncidentType } from '@prisma/client';
 
 export async function GET(req: Request) {
 	try {
@@ -72,6 +72,28 @@ export async function POST(req: Request) {
 			);
 		}
 
+		let incidentType: IncidentType | undefined = undefined;
+		if (body.incidentType) {
+			const upperType = String(body.incidentType).toUpperCase();
+			if (Object.values(IncidentType).includes(upperType as IncidentType)) {
+				incidentType = upperType as IncidentType;
+			} else if (upperType.includes('PEDESTRIAN') || upperType.includes('PERSON')) {
+				incidentType = IncidentType.PEDESTRIAN_ACCIDENT;
+			} else if (upperType.includes('FIRE')) {
+				incidentType = IncidentType.FIRE;
+			} else {
+				incidentType = IncidentType.VEHICLE_COLLISION;
+			}
+		}
+
+		let parsedFrameNumber: number | undefined = undefined;
+		if (body.frameNumber !== undefined && body.frameNumber !== null && body.frameNumber !== '') {
+			const num = Number(body.frameNumber);
+			if (!isNaN(num)) {
+				parsedFrameNumber = Math.round(num);
+			}
+		}
+
 		const newIncident = await createIncidentFromDetection({
 			cctvId: body.cctvId,
 			confidenceScore: body.confidenceScore,
@@ -80,6 +102,12 @@ export async function POST(req: Request) {
 			location: body.location,
 			latitude: body.latitude,
 			longitude: body.longitude,
+			incidentType: incidentType,
+			frameNumber: parsedFrameNumber,
+			videoTimestamp: body.videoTimestamp || undefined,
+			detectedObjects: Array.isArray(body.detectedObjects)
+				? body.detectedObjects.join(', ')
+				: body.detectedObjects || undefined,
 		});
 
 		return NextResponse.json(newIncident, { status: 201 });

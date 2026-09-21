@@ -17,9 +17,19 @@ import {
 	Info,
 	Clock,
 	AlertCircle,
+	Cpu,
 } from 'lucide-react';
 import { formatIncidentDate, formatTimeAgo } from '@/lib/incident-helper';
 import Dashboard from '@/components/dashboard';
+
+const formatAccidentType = (type?: string | null) => {
+	if (!type) return 'N/A';
+	return type
+		.toLowerCase()
+		.split('_')
+		.map(word => word.charAt(0).toUpperCase() + word.slice(1))
+		.join(' ');
+};
 
 interface IncidentVerificationPageProps {
 	params: Promise<{ id: string }>;
@@ -271,42 +281,97 @@ export default function IncidentVerificationDetailPage({
 										</p>
 									</div>
 								</div>
-								<div className='space-y-1'>
-									<p className='text-sm text-gray-400'>AI Confidence</p>
-									<div className='flex items-center gap-2'>
-										<div className='h-2 w-full max-w-24 rounded-full bg-gray-700'>
-											<div
-												className={`h-full rounded-full ${
-													incident.confidenceScore > 0.7
-														? 'bg-red-600'
-														: incident.confidenceScore > 0.5
-															? 'bg-amber-600'
-															: 'bg-blue-600'
-												}`}
-												style={{
-													width: `${Math.round(incident.confidenceScore * 100)}%`,
-												}}
-											/>
-										</div>
-										<span className='font-medium text-white'>
-											{Math.round(incident.confidenceScore * 100)}%
-										</span>
-									</div>
-								</div>
-								{incident.incidentType && (
-									<div className='space-y-1'>
-										<p className='text-sm text-gray-400'>Incident Type</p>
-										<p className='font-medium text-white'>
-											{incident.incidentType}
-										</p>
-									</div>
-								)}
 								{incident.severity && (
 									<div className='space-y-1'>
 										<p className='text-sm text-gray-400'>Severity</p>
 										<SeverityBadge severity={incident.severity} />
 									</div>
 								)}
+							</div>
+						</div>
+
+						{/* AI Detection Details */}
+						<div className='rounded-lg border border-blue-900/50 bg-gray-800/90 p-5 shadow-lg'>
+							<div className='mb-4 flex items-center justify-between border-b border-gray-700/60 pb-3'>
+								<h3 className='flex items-center gap-2 text-lg font-semibold text-white'>
+									<Cpu className='h-5 w-5 text-blue-400' />
+									AI Detection Details
+								</h3>
+								<span className='rounded-full border border-blue-800/60 bg-blue-950/60 px-3 py-0.5 text-xs font-medium text-blue-300'>
+									YOLOv11 Engine
+								</span>
+							</div>
+
+							<div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+								<div className='space-y-1'>
+									<p className='text-xs font-medium text-gray-400'>Accident Type</p>
+									<p className='font-semibold text-red-400'>
+										{formatAccidentType(incident.incidentType)}
+									</p>
+								</div>
+
+								<div className='space-y-1'>
+									<p className='text-xs font-medium text-gray-400'>AI Confidence</p>
+									<div className='flex items-center gap-2'>
+										<div className='h-2 w-full max-w-24 rounded-full bg-gray-700'>
+											<div
+												className='h-full rounded-full bg-gradient-to-r from-amber-500 to-red-500'
+												style={{
+													width: `${Math.round((incident.confidenceScore || 0) * 100)}%`,
+												}}
+											/>
+										</div>
+										<span className='font-bold text-white'>
+											{Math.round((incident.confidenceScore || 0) * 100)}%
+										</span>
+									</div>
+								</div>
+
+								<div className='space-y-1'>
+									<p className='text-xs font-medium text-gray-400'>CCTV Camera</p>
+									<p className='font-medium text-white'>
+										{incident.cctv?.name || 'Unknown Camera'}
+									</p>
+								</div>
+
+								<div className='space-y-1'>
+									<p className='text-xs font-medium text-gray-400'>Frame Number</p>
+									<p className='font-mono font-medium text-blue-300'>
+										{incident.frameNumber !== null && incident.frameNumber !== undefined
+											? `#${incident.frameNumber}`
+											: 'N/A'}
+									</p>
+								</div>
+
+								<div className='space-y-1'>
+									<p className='text-xs font-medium text-gray-400'>Video Timestamp</p>
+									<p className='font-mono font-medium text-emerald-400'>
+										{incident.videoTimestamp || 'N/A'}
+									</p>
+								</div>
+
+								<div className='space-y-1 md:col-span-2'>
+									<p className='mb-1.5 text-xs font-medium text-gray-400'>
+										Detected Objects in Frame
+									</p>
+									<div className='flex flex-wrap gap-1.5'>
+										{incident.detectedObjects ? (
+											incident.detectedObjects
+												.split(',')
+												.map((obj: string, idx: number) => (
+													<span
+														key={idx}
+														className='rounded-md border border-gray-700 bg-gray-900/80 px-2 py-1 font-mono text-xs text-gray-200 shadow-sm'>
+														{obj.trim()}
+													</span>
+												))
+										) : (
+											<span className='text-xs text-gray-500'>
+												No specific objects recorded
+											</span>
+										)}
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>

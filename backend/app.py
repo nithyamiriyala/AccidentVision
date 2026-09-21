@@ -417,10 +417,25 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
                         if meta.get("latitude") is not None and meta.get("longitude") is not None:
                             location = format_location(meta["latitude"], meta["longitude"])
                     
+                    video_seconds = frame_count / original_fps if original_fps > 0 else 0
+                    mins = int(video_seconds // 60)
+                    secs = video_seconds % 60
+                    video_timestamp_str = f"{mins:02d}:{secs:04.1f}"
+
+                    frame_detected_objects = []
+                    if len(tracked_detections) > 0:
+                        for idx in range(len(tracked_detections)):
+                            c_id = int(tracked_detections.class_id[idx])
+                            c_conf = float(tracked_detections.confidence[idx])
+                            c_name = CLASS_NAMES.get(c_id, "Unknown")
+                            frame_detected_objects.append(f"{c_name} ({int(c_conf * 100)}%)")
+
                     await websocket.send_json({
                         "type": "accident",
                         "accident_detected": True,
                         "frame_number": frame_count,
+                        "video_timestamp": video_timestamp_str,
+                        "detected_objects": frame_detected_objects,
                         "confidence": confidence,
                         "accident_type": class_name,
                         "location": location,
@@ -438,6 +453,8 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
                             "severity": "info",
                             "image_url": image_url,
                             "frame_number": frame_count,
+                            "video_timestamp": video_timestamp_str,
+                            "detected_objects": frame_detected_objects,
                             "accident_type": class_name,
                             "confidence": confidence,
                             "location": location,
