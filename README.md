@@ -334,9 +334,3 @@ Potential future enhancements include:
 - Improved detection across different road and weather conditions
 
 ---
-
-## 🙌 Acknowledgment
-
-AccidentVision builds upon the original Nirikshan project and its computer-vision-based accident detection approach.
-
-Model and dataset resources should be credited according to their respective licenses and original sources.
