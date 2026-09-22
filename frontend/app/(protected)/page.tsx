@@ -49,6 +49,7 @@ export default function Page() {
 		useState<number>(0);
 	const [processingComplete, setProcessingComplete] = useState(false);
 	const processingCompleteRef = useRef(false);
+	const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 	const wsRef = useRef<WebSocket | null>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -72,6 +73,10 @@ export default function Page() {
 
 	useEffect(() => {
 		return () => {
+			if (reconnectTimeoutRef.current) {
+				clearTimeout(reconnectTimeoutRef.current);
+				reconnectTimeoutRef.current = null;
+			}
 			if (wsRef.current) {
 				wsRef.current.close();
 				wsRef.current = null;
@@ -142,6 +147,11 @@ export default function Page() {
 	};
 
 	const cleanupExistingConnection = () => {
+		if (reconnectTimeoutRef.current) {
+			clearTimeout(reconnectTimeoutRef.current);
+			reconnectTimeoutRef.current = null;
+		}
+
 		if (wsRef.current) {
 			wsRef.current.close();
 			wsRef.current = null;
@@ -247,6 +257,15 @@ export default function Page() {
 					addLog('Accident was detected in this video', 'warning');
 				} else if (data.accident_found === false) {
 					addLog('No accidents detected in this video', 'info');
+				}
+
+				if (reconnectTimeoutRef.current) {
+					clearTimeout(reconnectTimeoutRef.current);
+					reconnectTimeoutRef.current = null;
+				}
+
+				if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+					wsRef.current.close(1000, 'Processing complete');
 				}
 			}
 
@@ -408,22 +427,30 @@ export default function Page() {
 		setDetectionActive(false);
 		setBackendReady(false);
 
+		const isClean = event.code === 1000 || processingCompleteRef.current;
 		const reason =
 			event.reason ||
 			(event.code === 1006
 				? 'Connection closed abnormally'
-				: 'Connection closed');
+				: isClean
+					? 'Processing complete'
+					: 'Connection closed');
 
-		addLog(`Disconnected: ${reason}`, 'warning');
+		addLog(`Disconnected: ${reason}`, isClean ? 'info' : 'warning');
 
-		if (currentCCTVRef.current && !processingCompleteRef.current) {
+		if (reconnectTimeoutRef.current) {
+			clearTimeout(reconnectTimeoutRef.current);
+			reconnectTimeoutRef.current = null;
+		}
+
+		if (currentCCTVRef.current && !processingCompleteRef.current && event.code !== 1000) {
 			const backoffTime = event.code === 1006 ? 3000 : 1000;
 			addLog(
 				`Attempting to reconnect in ${backoffTime / 1000} seconds...`,
 				'info'
 			);
 
-			setTimeout(() => {
+			reconnectTimeoutRef.current = setTimeout(() => {
 				if (currentCCTVRef.current && !processingCompleteRef.current) {
 					addLog('Reconnecting to detection service...', 'info');
 					connectToDetectionService(currentCCTVRef.current);
